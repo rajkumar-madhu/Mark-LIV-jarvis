@@ -1,0 +1,16 @@
+# Traefik — add jarvis.wecrew.in to kind ingress TLS passthrough
+#
+# On wecrew-anypoint, edit /docker/traefik/dynamic/cluster.yml
+# Add this line inside the cluster-ingress HostSNI rule (after research.wecrew.in):
+#
+#         || HostSNI(`jarvis.wecrew.in`)
+#
+# DNS (Hostinger):
+#   Type: A
+#   Name: jarvis
+#   Value: 213.210.36.154
+#   TTL: 300
+#
+# Verify:
+#   dig +short A jarvis.wecrew.in
+#   curl -sI https://jarvis.wecrew.in/healthz

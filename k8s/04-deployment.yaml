@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mark-liv-dashboard
+  namespace: mark-liv
+  labels:
+    app: mark-liv-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mark-liv-dashboard
+  template:
+    metadata:
+      labels:
+        app: mark-liv-dashboard
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+        - name: dashboard
+          image: mark-liv-dashboard:IMAGE_TAG
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: mark-liv-dashboard-config
+            - secretRef:
+                name: mark-liv-secrets
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+            - name: tmp
+              mountPath: /tmp
+            - name: config
+              mountPath: /app/config
+      volumes:
+        - name: uploads
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          emptyDir: {}

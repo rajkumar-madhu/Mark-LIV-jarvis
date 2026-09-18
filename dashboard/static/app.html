@@ -3,157 +3,232 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JARVIS Dashboard</title>
+  <meta name="color-scheme" content="light">
+  <title>Mark LIV Remote</title>
   <script src="/static/crypto.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:      #07090f;
-      --surface: rgba(255,255,255,0.04);
-      --border:  rgba(255,255,255,0.07);
-      --accent:  #6366f1;
-      --adim:    rgba(99,102,241,0.14);
-      --text:    #dde3ed;
-      --muted:   #5e6a7e;
-      --green:   #22c55e;
-      --gdim:    rgba(34,197,94,0.14);
+      --bg:      #f4f6f8;
+      --surface: #ffffff;
+      --border:  #e2e6eb;
+      --accent:  #1d4ed8;
+      --adim:    #eef3ff;
+      --text:    #111827;
+      --muted:   #5b6573;
+      --green:   #067647;
+      --gdim:    #ecfdf3;
+      --danger:  #b42318;
     }
     html, body {
-      height: 100%; background: var(--bg); color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      display: flex; flex-direction: column; overflow: hidden;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
-    /* ── HEADER ── */
     header {
-      flex-shrink: 0; display: flex; align-items: center; gap: 10px;
-      padding: 12px 16px; border-bottom: 1px solid var(--border);
-      background: rgba(7,9,15,0.95);
+      flex-shrink: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
     }
-    .logo { font-size: 15px; font-weight: 700; letter-spacing: 6px; }
-    .logo em { color: var(--accent); font-style: normal; }
+    .logo {
+      font-size: 15px;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+    .logo span { color: var(--muted); font-weight: 500; margin-left: 8px; font-size: 12px; }
     .pill {
-      display: flex; align-items: center; gap: 6px; padding: 4px 11px;
-      border-radius: 99px; background: var(--surface); border: 1px solid var(--border);
-      font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--muted); transition: all 0.3s;
+      display: flex; align-items: center; gap: 6px; padding: 4px 10px;
+      border-radius: 999px; background: #f3f4f6; border: 1px solid var(--border);
+      font-size: 11px; font-weight: 600; color: var(--muted);
     }
-    .pill.on { background: var(--gdim); border-color: rgba(34,197,94,0.3); color: var(--green); }
-    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); transition: background 0.3s; }
-    .pill.on .dot { background: var(--green); animation: blink 2s infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .pill.on { background: var(--gdim); border-color: #abefc6; color: var(--green); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #98a2b3; }
+    .pill.on .dot { background: var(--green); }
     .spacer { flex: 1; }
     .enc-badge {
-      font-size: 9px; font-weight: 700; letter-spacing: 1.5px; padding: 3px 8px;
-      border-radius: 4px; display: none;
+      font-size: 11px; font-weight: 600; padding: 3px 8px;
+      border-radius: 6px; display: none; border: 1px solid var(--border);
     }
-    .enc-badge.on  { display: block; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); color: var(--green); }
-    .enc-badge.off { display: block; background: rgba(255,100,100,0.08); border: 1px solid rgba(255,100,100,0.2); color: #f87171; }
-    .url { font-size: 10px; font-family: monospace; color: var(--muted); padding: 4px 9px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+    .enc-badge.on  { display: inline-block; background: var(--gdim); border-color: #abefc6; color: var(--green); }
+    .enc-badge.off { display: inline-block; background: #fef3f2; border-color: #fecdca; color: var(--danger); }
+    .url {
+      font-size: 11px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      color: var(--muted); padding: 4px 8px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 6px;
+    }
 
-    /* ── FEED ── */
-    main { flex: 1; overflow-y: auto; padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 10px; }
-    main::-webkit-scrollbar { width: 3px; }
-    main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    .msg { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.55; animation: pop 0.18s ease; }
-    @keyframes pop { from { opacity:0; transform:translateY(4px); } }
-    .msg-j   { align-self:flex-start; background:var(--adim);   border:1px solid rgba(99,102,241,0.18); border-bottom-left-radius:4px; }
-    .msg-u   { align-self:flex-end;   background:var(--surface); border:1px solid var(--border);        border-bottom-right-radius:4px; }
-    .msg-sys { align-self:center; font-size:11px; color:var(--muted); padding:2px 0; background:transparent; border:none; letter-spacing:0.3px; }
-    .lbl { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; opacity:0.45; margin-bottom:4px; }
-    .msg-j .lbl { color:var(--accent); }
-    .msg-u .lbl { color:var(--muted); text-align:right; }
+    main {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    main::-webkit-scrollbar { width: 8px; }
+    main::-webkit-scrollbar-thumb { background: #d0d5dd; border-radius: 8px; }
+    .empty {
+      margin: auto 0;
+      width: 100%;
+      padding: 0 24px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty h2 { font-size: 16px; font-weight: 650; color: var(--text); margin-bottom: 8px; }
+    .empty p { font-size: 14px; line-height: 1.55; max-width: 400px; margin: 0 auto; }
+    .msg {
+      max-width: 82%; padding: 10px 14px; border-radius: 10px;
+      font-size: 14px; line-height: 1.55; background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .msg-j { align-self: flex-start; background: var(--adim); border-color: #d6e2ff; }
+    .msg-u { align-self: flex-end; }
+    .msg-sys {
+      align-self: center; font-size: 12px; color: var(--muted);
+      padding: 4px 0; background: transparent; border: none;
+    }
+    .lbl {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .msg-j .lbl { color: var(--accent); }
+    .msg-u .lbl { text-align: right; }
 
-    /* ── FILE CARD ── */
     .msg-file {
       align-self: flex-end;
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 14px; border-bottom-right-radius: 4px;
-      padding: 11px 14px; display: flex; align-items: center; gap: 12px;
-      max-width: 82%; animation: pop 0.18s ease;
+      border-radius: 10px; padding: 12px 14px; display: flex;
+      align-items: center; gap: 12px; max-width: 82%;
     }
-    .fc-icon { font-size: 26px; flex-shrink: 0; }
+    .fc-badge {
+      flex-shrink: 0; min-width: 40px; text-align: center;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      padding: 8px 6px; border-radius: 6px; background: #f2f4f7; color: #344054;
+    }
     .fc-meta { flex: 1; min-width: 0; }
-    .fc-lbl  { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; opacity:0.45; color:var(--muted); margin-bottom:4px; }
+    .fc-lbl  { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
     .fc-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .fc-size { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .fc-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-top: 7px; overflow: hidden; }
+    .fc-size { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .fc-bar-wrap { height: 4px; background: #eaecf0; border-radius: 2px; margin-top: 8px; overflow: hidden; }
     .fc-bar { height: 100%; width: 0%; background: var(--accent); border-radius: 2px; transition: width 0.12s linear; }
-    .fc-status { font-size: 10px; font-weight: 700; letter-spacing: 1px; flex-shrink: 0; color: var(--muted); }
+    .fc-status { font-size: 11px; font-weight: 600; flex-shrink: 0; color: var(--muted); }
     .fc-status.done { color: var(--green); }
-    .fc-status.err  { color: #f87171; }
-    .fc-dl { display:block; margin-top:6px; font-size:11px; color:var(--accent); text-decoration:none; font-weight:600; }
-    .fc-dl:hover { opacity: 0.8; }
+    .fc-status.err  { color: var(--danger); }
+    .fc-dl { display: block; margin-top: 6px; font-size: 12px; color: var(--accent); text-decoration: none; font-weight: 600; }
+    .fc-dl:hover { text-decoration: underline; }
 
-    /* ── FOOTER ── */
-    footer { flex-shrink:0; padding:10px 14px; border-top:1px solid var(--border); background:rgba(7,9,15,0.95); display:flex; gap:8px; align-items:center; }
-    #inp { flex:1; padding:11px 14px; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; color:var(--text); font-size:14px; outline:none; transition:border-color 0.15s; }
-    #inp:focus { border-color: var(--accent); }
-    #inp::placeholder { color: var(--muted); }
-    .btn { padding:11px 15px; border:none; border-radius:12px; font-size:11px; font-weight:700; letter-spacing:1.5px; cursor:pointer; transition:opacity 0.15s,transform 0.1s; }
-    .btn:active { transform: scale(0.96); }
-    .btn:hover  { opacity: 0.82; }
-    .btn-send { background: var(--accent); color: #fff; }
-    .btn-wake { background:var(--surface); border:1px solid var(--border); color:var(--muted); display:none; }
-    .btn-wake.show { display:block; color:var(--green); border-color:rgba(34,197,94,0.35); }
-    .btn-attach {
-      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-      padding: 11px 13px; font-size: 16px; line-height: 1; border-radius: 12px;
-      cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: flex;
-      align-items: center; justify-content: center; flex-shrink: 0;
+    .help-card {
+      align-self: stretch;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      font-size: 13px;
+      line-height: 1.7;
     }
-    .btn-attach:hover  { opacity: 0.82; border-color: var(--accent); color: var(--accent); }
-    .btn-attach:active { transform: scale(0.96); }
+    .help-card h3 { font-size: 13px; font-weight: 650; margin-bottom: 8px; }
+    .help-card ol { padding-left: 18px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+    .help-card code, .flags-url {
+      background: var(--bg); padding: 1px 6px; border-radius: 4px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px;
+    }
+    .flags-url { display: inline-block; margin-top: 4px; cursor: pointer; user-select: all; }
 
-    /* ── MIC BUTTON ── */
-    #mic-btn {
-      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-      padding: 11px 13px; font-size: 16px; line-height: 1; border-radius: 12px;
-      cursor: pointer; transition: opacity 0.15s, transform 0.1s, background 0.2s, border-color 0.2s;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    footer {
+      flex-shrink: 0; width: 100%; padding: 10px 12px 14px;
+      border-top: 1px solid var(--border); background: var(--surface);
+      display: flex; gap: 8px; align-items: center;
     }
-    #mic-btn:hover  { opacity: 0.82; border-color: var(--accent); color: var(--accent); }
-    #mic-btn:active { transform: scale(0.96); }
+    #inp {
+      flex: 1; padding: 11px 12px; background: #fff;
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 14px; outline: none;
+    }
+    #inp:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12); }
+    #inp::placeholder { color: #98a2b3; }
+    .btn {
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer; background: #fff; color: var(--text);
+    }
+    .btn:hover { background: var(--bg); }
+    .btn-send { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-send:hover { background: #1a44bd; }
+    .btn-wake { display: none; }
+    .btn-wake.show { display: block; color: var(--green); border-color: #abefc6; background: var(--gdim); }
+    .icon-btn {
+      width: 42px; height: 42px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #fff; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 8px; cursor: pointer;
+    }
+    .icon-btn:hover { color: var(--accent); border-color: #b7c7f0; background: var(--adim); }
+    .icon-btn svg { width: 18px; height: 18px; }
     #mic-btn.recording {
-      background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.45); color: #ef4444;
-      animation: mic-pulse 1s ease-in-out infinite;
+      background: #fef3f2; border-color: #fecdca; color: var(--danger);
     }
-    #mic-btn.unsupported { opacity: 0.3; cursor: not-allowed; }
-    @keyframes mic-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.65;transform:scale(0.97)} }
+    #mic-btn.unsupported { opacity: 0.35; cursor: not-allowed; }
 
-    /* ── TOAST ── */
     #toast {
-      position:fixed; top:66px; left:50%; transform:translateX(-50%) translateY(-8px);
-      background:rgba(34,197,94,0.16); border:1px solid rgba(34,197,94,0.4);
-      color:var(--green); font-size:12px; font-weight:700; letter-spacing:1px;
-      padding:7px 18px; border-radius:99px;
-      opacity:0; transition:opacity 0.22s,transform 0.22s;
-      pointer-events:none; white-space:nowrap;
+      position: fixed; top: 64px; left: 50%; transform: translateX(-50%) translateY(-8px);
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 8px;
+      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none; white-space: nowrap;
     }
-    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 640px) {
+      .url { display: none; }
+      header { gap: 8px; flex-wrap: wrap; }
+      .logo span { display: none; }
+      footer { padding-bottom: 18px; }
+      #inp { min-width: 0; }
+    }
   </style>
 </head>
 <body>
   <div id="toast"></div>
   <header>
-    <div class="logo"><em>J</em>ARVIS</div>
+    <div class="logo">Mark LIV<span>Remote</span></div>
     <div class="pill" id="pill"><span class="dot"></span><span id="st">Connecting</span></div>
-    <div class="enc-badge" id="enc">AES-256</div>
+    <div class="enc-badge" id="enc">Encrypted</div>
     <div class="spacer"></div>
     <div class="url">__IP__:__PORT__</div>
   </header>
-  <main id="feed"></main>
+  <main id="feed">
+    <div class="empty" id="empty">
+      <h2>Ready to send commands</h2>
+      <p>Type a message, attach a file, or use the microphone. Activity from this computer appears here.</p>
+    </div>
+  </main>
   <footer>
-    <input id="inp" placeholder="Send a command to JARVIS…" autocomplete="off">
-    <label class="btn-attach" for="file-inp" title="Send file">📎</label>
+    <input id="inp" placeholder="Message Mark LIV…" autocomplete="off">
+    <label class="icon-btn" for="file-inp" title="Attach file" aria-label="Attach file">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M21.44 11.05l-8.49 8.49a6 6 0 01-8.49-8.49l8.49-8.49a4 4 0 015.66 5.66l-8.49 8.49a2 2 0 01-2.83-2.83l7.78-7.78"/>
+      </svg>
+    </label>
     <input type="file" id="file-inp" multiple accept="*/*" style="display:none">
-    <button id="mic-btn" onclick="doMic()" title="Voice command">🎤</button>
-    <button class="btn btn-wake" id="wake" onclick="doWake()">WAKE</button>
-    <button class="btn btn-send" onclick="doSend()">SEND</button>
+    <button id="mic-btn" class="icon-btn" onclick="doMic()" title="Voice command" aria-label="Voice command">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <rect x="9" y="3" width="6" height="11" rx="3"/>
+        <path d="M5 11a7 7 0 0014 0M12 18v3"/>
+      </svg>
+    </button>
+    <button class="btn btn-wake" id="wake" onclick="doWake()">Wake</button>
+    <button class="btn btn-send" onclick="doSend()">Send</button>
   </footer>
 
   <script>
-    // ── Auth — bearer token ───────────────────────────────────────────────────
+    const MIC_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>';
+    const STOP_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>';
+
     const _authToken  = sessionStorage.getItem('jarvis_token');
     const _sessionKey = sessionStorage.getItem('jarvis_key');
 
@@ -167,7 +242,6 @@
       return fetch(url, opts);
     }
 
-    // ── AES-256-CBC encryption (CryptoJS) ────────────────────────────────────
     const _AES_SALT = 'JARVIS-DASHBOARD-v1';
     let _aesKey = null;
 
@@ -198,9 +272,8 @@
     const _encReady = _sessionKey ? _initCrypto(_sessionKey) : false;
     const encBadge  = document.getElementById('enc');
     if (_encReady) { encBadge.className = 'enc-badge on'; }
-    else           { encBadge.className = 'enc-badge off'; encBadge.textContent = 'NO ENC'; }
+    else           { encBadge.className = 'enc-badge off'; encBadge.textContent = 'Not encrypted'; }
 
-    // ── WebSocket ─────────────────────────────────────────────────────────────
     const feed  = document.getElementById('feed');
     const pill  = document.getElementById('pill');
     const stTxt = document.getElementById('st');
@@ -210,8 +283,8 @@
     const _wsUrl   = `${_wsProto}://${location.host}/ws?token=${encodeURIComponent(_authToken)}`;
     const ws       = new WebSocket(_wsUrl);
 
-    ws.onopen    = () => { sys('Remote session active.'); toast('Connected to JARVIS'); };
-    ws.onclose   = () => sys('Connection lost — refresh to reconnect.');
+    ws.onopen    = () => { sys('Remote session active.'); toast('Connected'); };
+    ws.onclose   = () => sys('Connection lost. Refresh this page to reconnect.');
     ws.onerror   = () => sys('Connection error.');
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
@@ -222,6 +295,13 @@
       if (m.type === 'file_received') _onFileReceived(m);
     };
 
+    function hideEmpty() {
+      const e = document.getElementById('empty');
+      if (!e) return;
+      const hasConversation = feed.querySelector('.msg-j, .msg-u, .msg-file, .help-card');
+      e.hidden = !!hasConversation;
+    }
+
     function setStatus(s) {
       if (s === 'active') {
         pill.className = 'pill on'; stTxt.textContent = 'Active'; wake.classList.remove('show');
@@ -231,10 +311,11 @@
     }
 
     function append(speaker, text) {
+      hideEmpty();
       const d = document.createElement('div');
       if (speaker === 'jarvis') {
         d.className = 'msg msg-j';
-        d.innerHTML = `<div class="lbl">Jarvis</div>${esc(text)}`;
+        d.innerHTML = `<div class="lbl">Mark LIV</div>${esc(text)}`;
       } else {
         d.className = 'msg msg-u';
         d.innerHTML = `<div class="lbl">You</div>${esc(text)}`;
@@ -253,19 +334,18 @@
       return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // ── File helpers ──────────────────────────────────────────────────────────
     function _fileIcon(name) {
       const ext = (name.split('.').pop() || '').toLowerCase();
-      if (['jpg','jpeg','png','gif','webp','heic','heif','avif','bmp','svg'].includes(ext)) return '🖼️';
-      if (['mp4','mov','avi','mkv','webm','m4v','3gp'].includes(ext))                       return '🎬';
-      if (['mp3','m4a','wav','flac','aac','ogg','opus'].includes(ext))                      return '🎵';
-      if (['pdf'].includes(ext))                                                             return '📋';
-      if (['doc','docx','txt','md','rtf','odt'].includes(ext))                              return '📝';
-      if (['xls','xlsx','csv','ods'].includes(ext))                                         return '📊';
-      if (['ppt','pptx','odp'].includes(ext))                                               return '📑';
-      if (['zip','rar','7z','tar','gz','bz2','xz'].includes(ext))                          return '📦';
-      if (['apk','exe','dmg','deb','rpm','msi'].includes(ext))                              return '⚙️';
-      return '📎';
+      if (['jpg','jpeg','png','gif','webp','heic','heif','avif','bmp','svg'].includes(ext)) return 'IMG';
+      if (['mp4','mov','avi','mkv','webm','m4v','3gp'].includes(ext))                       return 'VID';
+      if (['mp3','m4a','wav','flac','aac','ogg','opus'].includes(ext))                      return 'AUD';
+      if (['pdf'].includes(ext))                                                             return 'PDF';
+      if (['doc','docx','txt','md','rtf','odt'].includes(ext))                              return 'DOC';
+      if (['xls','xlsx','csv','ods'].includes(ext))                                         return 'XLS';
+      if (['ppt','pptx','odp'].includes(ext))                                               return 'PPT';
+      if (['zip','rar','7z','tar','gz','bz2','xz'].includes(ext))                          return 'ZIP';
+      if (['apk','exe','dmg','deb','rpm','msi'].includes(ext))                              return 'APP';
+      return 'FILE';
     }
 
     function _fmtSize(bytes) {
@@ -275,16 +355,15 @@
       return (bytes / 1024 ** 3).toFixed(2) + ' GB';
     }
 
-    // ── File upload (phone → computer) ────────────────────────────────────────
     function _uploadFile(file) {
+      hideEmpty();
       const id = 'fc_' + Date.now() + '_' + Math.random().toString(36).slice(2);
 
-      // Create file card in feed
       const card = document.createElement('div');
       card.className = 'msg-file';
       card.id = id;
       card.innerHTML = `
-        <div class="fc-icon">${_fileIcon(file.name)}</div>
+        <div class="fc-badge">${_fileIcon(file.name)}</div>
         <div class="fc-meta">
           <div class="fc-lbl">Sending</div>
           <div class="fc-name">${esc(file.name)}</div>
@@ -319,16 +398,16 @@
           try { savedName = JSON.parse(xhr.responseText).name || file.name; } catch {}
           const dlUrl = `/uploads/${encodeURIComponent(savedName)}?token=${encodeURIComponent(_authToken)}`;
           if (bar)  { bar.style.width = '100%'; bar.style.background = 'var(--green)'; }
-          if (st)   { st.textContent = '✓'; st.className = 'fc-status done'; }
+          if (st)   { st.textContent = 'Done'; st.className = 'fc-status done'; }
           if (lbl)  lbl.textContent = 'Sent';
           if (meta) meta.insertAdjacentHTML('beforeend',
-            `<a class="fc-dl" href="${dlUrl}" download="${esc(savedName)}">⬇ Download back</a>`);
-          toast('File sent!');
+            `<a class="fc-dl" href="${dlUrl}" download="${esc(savedName)}">Download copy</a>`);
+          toast('File saved on the computer');
         } else {
           let errMsg = 'Upload failed';
           try { errMsg = JSON.parse(xhr.responseText).error || errMsg; } catch {}
-          if (bar) bar.style.background = '#f87171';
-          if (st)  { st.textContent = 'ERR'; st.className = 'fc-status err'; }
+          if (bar) bar.style.background = 'var(--danger)';
+          if (st)  { st.textContent = 'Error'; st.className = 'fc-status err'; }
           if (lbl) lbl.textContent = errMsg;
         }
       };
@@ -336,7 +415,7 @@
       xhr.onerror = () => {
         const st  = document.getElementById(`${id}_st`);
         const lbl = card.querySelector('.fc-lbl');
-        if (st)  { st.textContent = 'ERR'; st.className = 'fc-status err'; }
+        if (st)  { st.textContent = 'Error'; st.className = 'fc-status err'; }
         if (lbl) lbl.textContent = 'Connection error';
       };
 
@@ -345,33 +424,31 @@
       xhr.send(fd);
     }
 
-    // File received by another WebSocket client (e.g., second open tab)
     function _onFileReceived(m) {
+      hideEmpty();
       const dlUrl = `/uploads/${encodeURIComponent(m.name)}?token=${encodeURIComponent(_authToken)}`;
       const card  = document.createElement('div');
       card.className = 'msg-file';
       card.innerHTML = `
-        <div class="fc-icon">${_fileIcon(m.name)}</div>
+        <div class="fc-badge">${_fileIcon(m.name)}</div>
         <div class="fc-meta">
           <div class="fc-lbl">Received</div>
           <div class="fc-name">${esc(m.name)}</div>
           <div class="fc-size">${_fmtSize(m.size)}</div>
-          <a class="fc-dl" href="${dlUrl}" download="${esc(m.name)}">⬇ Download</a>
+          <a class="fc-dl" href="${dlUrl}" download="${esc(m.name)}">Download</a>
         </div>
-        <div class="fc-status done">✓</div>
+        <div class="fc-status done">Done</div>
       `;
       feed.appendChild(card);
       feed.scrollTop = feed.scrollHeight;
-      toast('File received on computer!');
+      toast('File received on the computer');
     }
 
-    // File input change handler
     document.getElementById('file-inp').addEventListener('change', function () {
       Array.from(this.files).forEach(_uploadFile);
-      this.value = ''; // reset so the same file can be re-sent
+      this.value = '';
     });
 
-    // ── Commands ──────────────────────────────────────────────────────────────
     function doSend() {
       const inp = document.getElementById('inp');
       const txt = inp.value.trim();
@@ -388,7 +465,7 @@
     }
 
     function doWake() {
-      sys('Sending wake signal…');
+      sys('Waking the assistant…');
       _authFetch('/api/wake', { method: 'POST' });
     }
 
@@ -396,7 +473,6 @@
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
     });
 
-    // ── Toast ─────────────────────────────────────────────────────────────────
     let _toastTimer;
     function toast(msg) {
       const t = document.getElementById('toast');
@@ -405,7 +481,6 @@
       _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
     }
 
-    // ── Real-time Voice — PCM16 WebSocket → Gemini Live ──────────────────────
     const micBtn  = document.getElementById('mic-btn');
     let _voiceWs  = null;
     let _audioCtx = null;
@@ -413,12 +488,12 @@
     let _audioNd  = null;
 
     function _micIdle() {
-      micBtn.innerHTML = '🎤';
-      micBtn.title     = 'Voice — tap to speak';
+      micBtn.innerHTML = MIC_ICON;
+      micBtn.title     = 'Voice command';
+      micBtn.setAttribute('aria-label', 'Voice command');
       micBtn.classList.remove('recording');
     }
 
-    // Float32 PCM → resample to 16 kHz + convert to Int16
     function _f32toPcm16(f32, srcRate) {
       let s = f32;
       if (srcRate !== 16000) {
@@ -435,30 +510,25 @@
     }
 
     function _showVoiceSetup() {
-      if (document.getElementById('voice-setup')) return; // show once
+      if (document.getElementById('voice-setup')) return;
+      hideEmpty();
       const origin = location.origin;
       const card = document.createElement('div');
       card.id = 'voice-setup';
-      card.style.cssText = [
-        'align-self:stretch', 'background:rgba(99,102,241,0.07)',
-        'border:1px solid rgba(99,102,241,0.22)', 'border-radius:14px',
-        'padding:16px 18px', 'font-size:13px', 'line-height:1.8',
-        'animation:pop 0.18s ease'
-      ].join(';');
+      card.className = 'help-card';
       card.innerHTML =
-        '<div style="font-weight:700;color:#818cf8;letter-spacing:.5px;margin-bottom:10px">🎤 One-time voice setup</div>' +
-        '<ol style="padding-left:18px;color:#8899aa;margin:0;display:flex;flex-direction:column;gap:4px">' +
-        '<li>Open a new tab → go to <span style="background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:12px">chrome://flags</span></li>' +
-        '<li>Search: <strong style="color:#dde3ed">Insecure origins treated as secure</strong></li>' +
-        '<li>Paste this URL into the box:<br><span id="flags-url" style="background:rgba(255,255,255,0.07);padding:2px 8px;border-radius:4px;font-family:monospace;font-size:11px;user-select:all;cursor:pointer">' + esc(origin) + '</span></li>' +
-        '<li>Set to <strong style="color:#22c55e">Enabled</strong> → tap <strong style="color:#dde3ed">Relaunch</strong></li>' +
-        '<li>Return here and tap 🎤</li>' +
+        '<h3>Microphone setup (one time)</h3>' +
+        '<ol>' +
+        '<li>Open a new tab and go to <code>chrome://flags</code></li>' +
+        '<li>Search for <strong>Insecure origins treated as secure</strong></li>' +
+        '<li>Paste this URL into the box:<br><span class="flags-url" id="flags-url">' + esc(origin) + '</span></li>' +
+        '<li>Set it to <strong>Enabled</strong>, then tap <strong>Relaunch</strong></li>' +
+        '<li>Return here and tap the microphone button</li>' +
         '</ol>';
       feed.appendChild(card);
       feed.scrollTop = feed.scrollHeight;
-      // tap to copy
       card.querySelector('#flags-url').addEventListener('click', () => {
-        navigator.clipboard?.writeText(origin).then(() => toast('URL copied!')).catch(() => {});
+        navigator.clipboard?.writeText(origin).then(() => toast('URL copied')).catch(() => {});
       });
     }
 
@@ -476,12 +546,11 @@
         });
       } catch (e) {
         sys(e.name === 'NotAllowedError'
-          ? 'Microphone denied — tap the address bar lock and allow microphone.'
-          : 'Mic error: ' + e.message);
+          ? 'Microphone denied. Allow it from the address-bar lock, then try again.'
+          : 'Microphone error: ' + e.message);
         return;
       }
 
-      // 16 kHz context (fall back to native rate — _f32toPcm16 resamples)
       let ctx;
       try { ctx = new AudioContext({ sampleRate: 16000 }); }
       catch (_) { ctx = new AudioContext(); }
@@ -497,15 +566,12 @@
         const rate = ctx.sampleRate;
         const src  = ctx.createMediaStreamSource(stream);
 
-        // AudioWorklet (modern) — runs in dedicated audio thread
         const wCode = `class J extends AudioWorkletProcessor{process(i){const c=i[0]?.[0];if(c)this.port.postMessage(c.slice());return true;}}registerProcessor('j',J);`;
         try {
           const burl = URL.createObjectURL(new Blob([wCode], { type: 'application/javascript' }));
           await ctx.audioWorklet.addModule(burl);
           URL.revokeObjectURL(burl);
           const nd = new AudioWorkletNode(ctx, 'j');
-          // Buffer to 1024 samples (64 ms at 16 kHz) before sending —
-          // matches PC mic chunk size, prevents queue flooding on the server.
           let _pbuf = [], _plen = 0;
           nd.port.onmessage = e => {
             const chunk = new Int16Array(_f32toPcm16(e.data, rate));
@@ -520,7 +586,6 @@
           src.connect(nd);
           _audioNd = nd;
         } catch (_) {
-          // ScriptProcessor fallback (deprecated, still works everywhere)
           const sp = ctx.createScriptProcessor(4096, 1, 1);
           sp.onaudioprocess = e => {
             if (ws.readyState === 1) ws.send(_f32toPcm16(e.inputBuffer.getChannelData(0), rate));
@@ -529,11 +594,12 @@
           _audioNd = sp;
         }
 
-        micBtn.innerHTML = '⏹';
-        micBtn.title     = 'Tap to stop';
+        micBtn.innerHTML = STOP_ICON;
+        micBtn.title     = 'Stop recording';
+        micBtn.setAttribute('aria-label', 'Stop recording');
         micBtn.classList.add('recording');
         sys('Voice live — speak now');
-        toast('🎤 Live');
+        toast('Microphone live');
       };
 
       ws.onclose = () => { _stopVoice(); };

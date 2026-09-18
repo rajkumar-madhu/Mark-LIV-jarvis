@@ -1,0 +1,6 @@
+# Slim runtime for the Kubernetes FastAPI dashboard only.
+# Do not install PyQt6 / audio / desktop-control packages in the cluster image.
+fastapi>=0.110,<1
+uvicorn[standard]>=0.27,<1
+cryptography>=42,<50
+python-multipart>=0.0.9,<1
