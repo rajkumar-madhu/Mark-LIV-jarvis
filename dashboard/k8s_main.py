@@ -18,6 +18,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from dashboard.server import BASE_DIR, DashboardServer  # noqa: E402
+from dashboard.status import K8S_STATUS_MESSAGE  # noqa: E402
 
 
 def _seed_api_key_file() -> None:
@@ -56,7 +57,7 @@ async def _main() -> None:
     )
     await server.broadcast({
         "type": "sys",
-        "text": "Mark LIV dashboard running in Kubernetes. Voice HUD is not available in-cluster.",
+        "text": K8S_STATUS_MESSAGE,
     })
     await server.serve()
 
