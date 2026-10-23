@@ -11,6 +11,7 @@ Install deps:  pip install fastapi "uvicorn[standard]" cryptography
 import asyncio
 import base64
 import hashlib
+import os
 import re
 import secrets
 import socket
@@ -39,6 +40,11 @@ BASE_DIR    = Path(__file__).resolve().parent.parent
 STATIC_DIR  = Path(__file__).parent / "static"
 PORT        = 8000
 MAX_UPLOAD_MB = 500
+
+
+def _k8s_mode() -> bool:
+    """True when running as a cluster service (ingress terminates TLS)."""
+    return bool(os.environ.get("KUBERNETES_SERVICE_HOST") or os.environ.get("JARVIS_K8S"))
 
 
 def _make_uploads_dir() -> Path:
@@ -100,6 +106,7 @@ def _ensure_network_access(port: int) -> None:
     """Cross-platform, best-effort: open port in the OS firewall for LAN access.
 
     Runs in a background thread — never blocks uvicorn startup.
+    No-op in Kubernetes: ingress / NetworkPolicy owns exposure.
 
     Windows : writes a .bat file, runs it elevated via Windows ShellExecuteW
               (native UAC dialog, guaranteed to appear). One-time setup.
@@ -107,6 +114,9 @@ def _ensure_network_access(port: int) -> None:
     Linux   : pkexec GUI → sudo -n → prints manual command as fallback.
     """
     import sys, subprocess, os, tempfile, threading
+
+    if _k8s_mode():
+        return
 
     # ── Windows ──────────────────────────────────────────────────────────────
     if sys.platform == "win32":
@@ -466,6 +476,7 @@ class DashboardServer:
         self._wake_callback               = None
         self._connect_callback            = None
         self._pending_keys: dict[str, float] = {}
+        self._static_keys: set[str]         = set()  # durable PINs (k8s / env)
         self._device_sessions: dict[str, dict] = {}  # device_token → {session_key}
         self._phone_audio_queue: asyncio.Queue    = asyncio.Queue(maxsize=200)
         self._uploads_dir                 = UPLOADS_DIR
@@ -481,6 +492,24 @@ class DashboardServer:
         key = ''.join(secrets.choice(_KEY_CHARS) for _ in range(6))
         self._pending_keys[key] = now + expiry_secs
         return key
+
+    def register_static_pin(self, pin: str) -> str:
+        """Durable pairing PIN that is not consumed on login (cluster mode)."""
+        key = str(pin or "").strip().upper()
+        if not key:
+            key = self.new_key(expiry_secs=10 * 365 * 24 * 3600)
+        self._static_keys.add(key)
+        return key
+
+    def _consume_pin(self, entered: str) -> bool:
+        entered = str(entered or "").strip().upper()
+        now = time.time()
+        if entered and entered in self._static_keys:
+            return True
+        if entered in self._pending_keys and self._pending_keys[entered] > now:
+            del self._pending_keys[entered]
+            return True
+        return False
 
     @staticmethod
     def _ssl_enabled() -> bool:
@@ -542,6 +571,10 @@ class DashboardServer:
             tok = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
             return bool(tok) and tok in self._tokens
 
+        @app.get("/healthz")
+        async def healthz():
+            return JSONResponse({"ok": True, "service": "mark-liv-dashboard"})
+
         # serve CryptoJS from local cache, fallback to CDN redirect
         @app.get("/static/crypto.js")
         async def serve_crypto():
@@ -561,17 +594,15 @@ class DashboardServer:
             # Server-side header auth can't work here because browser navigations
             # don't send custom headers (location.href doesn't carry Authorization).
             html = (self._app_html
-                    .replace("__IP__", self._ip)
-                    .replace("__PORT__", str(PORT)))
+                    .replace("__IP__", os.environ.get("PUBLIC_HOST") or self._ip)
+                    .replace("__PORT__", os.environ.get("PUBLIC_PORT") or str(PORT)))
             return HTMLResponse(html)
 
         @app.post("/login")
         async def login(req: Request):
             body    = await req.json()
             entered = str(body.get("pin", "")).strip().upper()
-            now     = time.time()
-            if entered in self._pending_keys and self._pending_keys[entered] > now:
-                del self._pending_keys[entered]          # one-time use
+            if self._consume_pin(entered):
                 tok = secrets.token_urlsafe(32)
                 self._tokens.add(tok)
                 self._token_keys[tok] = entered
@@ -589,26 +620,26 @@ class DashboardServer:
         @app.get("/auto-login")
         async def auto_login(key: str = ""):
             """QR code target — validates one-time key, creates session, redirects phone."""
-            now = time.time()
-            if not key or key not in self._pending_keys or self._pending_keys[key] <= now:
+            if not self._consume_pin(key):
                 return HTMLResponse("""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width">
+<meta name="color-scheme" content="light">
 <style>
-  body{background:#07090f;color:#dde3ed;font-family:sans-serif;
-       display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}
-  h2{color:#f87171;margin-bottom:12px}p{color:#5e6a7e;font-size:14px}
+  body{background:#f4f6f8;color:#111827;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:24px}
+  h2{color:#b42318;margin-bottom:12px;font-size:20px}p{color:#5b6573;font-size:14px;line-height:1.5}
 </style></head>
-<body><div><h2>Link Expired</h2>
-<p>Press <strong style="color:#dde3ed">Remote Control</strong> in JARVIS to get a new QR code.</p>
+<body><div><h2>Link expired</h2>
+<p>Open <strong style="color:#111827">Remote Control</strong> on the computer to get a new QR code.</p>
 </div></body></html>""")
 
-            del self._pending_keys[key]
+            pin = str(key or "").strip().upper()
             tok     = secrets.token_urlsafe(32)
             dev_tok = secrets.token_urlsafe(32)
             self._tokens.add(tok)
-            self._token_keys[tok] = key
-            self._aes_key(key)
-            self._device_sessions[dev_tok] = {"session_key": key}
+            self._token_keys[tok] = pin
+            self._aes_key(pin)
+            self._device_sessions[dev_tok] = {"session_key": pin}
 
             if self._connect_callback:
                 self._connect_callback()
@@ -618,19 +649,20 @@ class DashboardServer:
 
             return HTMLResponse(f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width">
+<meta name="color-scheme" content="light">
 <style>
-  body{{background:#07090f;color:#dde3ed;font-family:sans-serif;
+  body{{background:#f4f6f8;color:#111827;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
        display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}}
-  p{{color:#5e6a7e;font-size:14px}}
+  p{{color:#5b6573;font-size:14px}}
 </style></head>
 <body>
 <script>
   sessionStorage.setItem('jarvis_token','{tok}');
-  sessionStorage.setItem('jarvis_key','{key}');
+  sessionStorage.setItem('jarvis_key','{pin}');
   localStorage.setItem('jarvis_device_token','{dev_tok}');
   setTimeout(function(){{location.replace('/')}},400);
 </script>
-<p>Connecting to JARVIS…</p>
+<p>Connecting to Mark LIV…</p>
 </body></html>""")
 
         @app.post("/api/device-login")
@@ -859,14 +891,16 @@ class DashboardServer:
             print("[Dashboard] Run:  pip install fastapi 'uvicorn[standard]' cryptography")
             return
 
+        in_k8s = _k8s_mode()
+
         # Firewall setup runs in a thread — uvicorn starts immediately,
         # no waiting for UAC dialogs or subprocess timeouts.
-        asyncio.get_event_loop().run_in_executor(None, _ensure_network_access, PORT)
+        if not in_k8s:
+            asyncio.get_event_loop().run_in_executor(None, _ensure_network_access, PORT)
+            # Generate the TLS pair on first run so no private key ships in the repo.
+            _ensure_certs()
 
-        # Generate the TLS pair on first run so no private key ships in the repo.
-        _ensure_certs()
-
-        use_ssl  = self._ssl_enabled()
+        use_ssl  = (not in_k8s) and self._ssl_enabled()
         ssl_key  = BASE_DIR / "config" / "certs" / "jarvis.key"
         ssl_cert = BASE_DIR / "config" / "certs" / "jarvis.crt"
 
@@ -880,5 +914,8 @@ class DashboardServer:
 
         proto = "https" if use_ssl else "http"
         print(f"[Dashboard] {proto}://{self._ip}:{PORT}")
-        print("[Dashboard] Press 'Remote Control' in JARVIS UI to get the QR code.")
+        if in_k8s:
+            print("[Dashboard] Kubernetes mode: HTTP only (TLS at ingress). Desktop HUD is not available.")
+        else:
+            print("[Dashboard] Press 'Remote Control' in JARVIS UI to get the QR code.")
         await uvicorn.Server(cfg).serve()

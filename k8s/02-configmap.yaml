@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mark-liv-dashboard-config
+  namespace: mark-liv
+data:
+  JARVIS_K8S: "1"
+  PUBLIC_HOST: "jarvis.wecrew.in"
+  PUBLIC_PORT: "443"
